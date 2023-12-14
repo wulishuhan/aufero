@@ -1,0 +1,91 @@
+body {
+    background-color: #f0f3fa;
+    height: 100%;
+}
+
+.container {
+    width: 1440px;
+    margin: 0 auto;
+}
+
+* {
+    word-wrap: break-word;
+    font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "Heiti SC", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
+}
+
+[class^="ortur-icon-"] * {
+    font-family: "icomoon" !important;
+}
+
+.baseButton {
+    height: 42px;
+    background: #e8ebf4;
+    border-radius: 6px;
+    color: #000;
+    padding: 12px 15px;
+}
+
+.baseButton:hover {
+    // background-color: red;
+    color: #000;
+}
+
+.el-button--primary {
+    background: #1e78f0;
+}
+
+.user-popover {
+    border: none;
+    padding: 0;
+    margin-left: -26px;
+    border-radius: 10px;
+}
+
+.popover {
+    padding: 0;
+    margin-top: 0px;
+}
+
+.notice-popover {
+    padding: 0px;
+    font-size: 16px;
+    border: none;
+    box-shadow: none;
+    background: none;
+    color: #1a1a1a;
+    margin-top: 32px !important;
+}
+
+.el-message-box {
+    width: 377px;
+    height: 168px;
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 0;
+    .el-message-box__header {
+        display: none;
+    }
+    .el-message-box__content {
+        margin-top: 20px;
+        text-align: center;
+        font-size: 20px;
+        font-weight: 400;
+        color: #141414;
+    }
+    .el-message-box__btns {
+        margin-top: 20px;
+        text-align: center;
+        .el-button--default {
+            margin: 0 28px;
+            background: #1e78f0;
+            border-radius: 6px;
+            color: white;
+            width: 88px;
+            height: 40px;
+        }
+        .el-button--primary {
+            background: #ff6161;
+            border-radius: 6px;
+        }
+    }
+}
