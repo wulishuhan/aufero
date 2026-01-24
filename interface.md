@@ -24,219 +24,989 @@
     }
   - 响应: 创建结果（通常返回新建对象或成功状态）
 
-- POST /library/collection/{collectionId}/resource/{resourceId}
-  - 路径参数:
-    - collectionId: number|string
-    - resourceId: number|string
-  - 请求（body）: 可选，函数签名允许传 `data`，但调用中通常只用路径参数
-  - 响应: 操作成功/失败
+# API 清单（JSON 格式）
 
-- DELETE /library/collection/{collectionId}/resource/{resourceId}
-  - 路径参数: collectionId, resourceId
-  - 响应: 操作成功/失败
+本文件覆盖并列出 `src/api` 下所有接口。每个接口给出：`name`、`method`、`url`、`request`（可含 `params` 与 `json` / path）、`response`（JSON 示例）、以及 `example`（请求示例与响应示例）。
 
-- GET /library/collection/{collectionId}/resource/list?userId={userId}
-  - 路径参数: collectionId
-  - 查询参数: userId
-  - 响应: res.data.rows (Array<Resource>), res.data.total (number)
-
-- GET /library/collection/resource/list
-  - 查询参数: params（通用筛选/分页）
-  - 响应: 常见格式为 { rows: Array, total: number }
-
-- DELETE /library/collection/resource/{resourceId}
-  - 路径参数: resourceId
-  - 响应: 操作成功/失败
-
-**资源（Resource）相关**
-
-- POST /library/resource
-  - 请求（body）: Resource 对象（字段由后端定义，示例常见字段：title, description, tags, authorId, files...）
-  - 响应: 创建后的资源对象或操作结果
-
-- GET /library/resource/detail/{id}
-  - 路径参数: id
-  - 响应: 资源详情（通常 res.data 或 res.data.data 为 Resource 对象）
-
-- PUT /library/resource
-  - 请求（body）: 完整或部分 Resource 对象（包含 id）
-  - 响应: 更新结果/更新后的对象
-
-- GET /library/resource/search
-  - 查询参数示例:
-    {
-      pageSize: number,
-      pageNum: number,
-      sort?: 'popular'|'newest'|string,
-      // 其他过滤字段可能存在
+[
+  {
+    "name": "getBanner",
+    "method": "GET",
+    "url": "/library/banner",
+    "request": { "params": { "optional": ["position","pageNum","pageSize"] } },
+    "response": { "data": [{ "title": "string", "image": "string", "url": "string" }] },
+    "example": {
+      "request": "GET /library/banner",
+      "response": { "code": 0, "data": [{ "title": "Welcome", "image": "https://.../img.jpg", "url": "https://..." }] }
     }
-  - 响应: res.data.rows (Array<Resource>), res.data.total (number)
-
-- GET /library/resource/list
-  - 查询参数: params（按条件或 id 列表检索）
-  - 响应: { rows: Array<Resource>, total: number }
-
-- GET /library/resource/list/creator
-  - 查询参数: { creatorId, pageSize, pageNum }
-  - 响应: { rows: Array<Resource>, total: number }
-
-- GET /library/resource/list/similar
-  - 查询参数: { resourceId, pageSize, pageNum }
-  - 响应: { rows: Array<Resource>, total: number }
-
-- GET /library/tag/list
-  - 查询参数: params（筛选/分页）
-  - 响应: 标签数组（如 res.data.rows 或 res.data.data）
-
-- GET /library/author/search
-  - 查询参数: params（姓名或关键词、分页）
-  - 响应: 作者数组
-
-- POST /library/resource/upload
-  - 请求: multipart/form-data (`formData`)，通常含字段 `file` 或 `files`
-  - 响应: 上传结果（文件 URL / id）
-
-- POST /library/resource/uploadS3
-  - 请求（body）: { filename: string, contentType?: string, ... }（依后端定义）
-  - 响应: S3 上传地址/凭证，如 { uploadUrl: string, fields?: object }
-
-- GET /library/resource/follow/list
-  - 查询参数: { pageSize, pageNum }
-  - 响应: res.data.rows (Array<Resource>), res.data.total (number)
-
----
-
-说明与建议：
-- 代码中常见响应访问模式为 `res.data.rows` 与 `res.data.total`，或 `res.data.data`（集合列表）。根据后端实际实现，`res.data` 内层可能是 `data` 或直接包含 `rows`。
-- 如果需要，我可以把每个接口的入参/出参转成严格的 JSON Schema 或导出为 CSV/Markdown 表格，或补全 `Resource`/`Collection` 的字段细节（需要后端文档或示例响应）。
-**概览（来源文件）**
-- collection.js  
-- resource.js
-
-**提取结果 — collection.js**
-- `getCollectionList(params)`  
-  - 方法/URL: GET `/library/collection/list`  
-  - 入参: 查询参数 `params`（示例使用：`{ userId: <user_id> }`）  
-  - 出参: 响应数据置于 `res.data.data`（用于赋值为 folders，数组，每项至少含 `id`）  
-
-- `addCollection(data)`  
-  - 方法/URL: POST `/library/collection`  
-  - 入参: 请求体 `data`（示例使用：`{ name: <folderName>, userId: <user_id> }`）  
-  - 出参: 通常为操作成功响应（代码中未直接读取返回体，随后会调用 `getCollectionList` 更新）  
-
-- `addResourceToCollection(data)`  
-  - 方法/URL: POST `/library/collection/${data.collectionId}/resource/${data.resourceId}`  
-  - 入参: 路径参数 `collectionId`, `resourceId`（调用示例：`{ collectionId, resourceId }`）；可传空或附带 `data` 作为 body（实现传参形式为 function 参数）  
-  - 出参: 操作成功响应（代码中仅基于成功与否处理 UI/状态）  
-
-- `deleteResourceInCollection(data)`  
-  - 方法/URL: DELETE `/library/collection/${data.collectionId}/resource/${data.resourceId}`  
-  - 入参: 路径参数 `collectionId`, `resourceId`  
-  - 出参: 操作成功响应  
-
-- `getResourceInCollection(data)`  
-  - 方法/URL: GET `/library/collection/${data.collectionId}/resource/list/?userId=${data.userId}`  
-  - 入参: 路径参数 `collectionId` + 查询参数 `userId`  
-  - 出参: 响应结构中包含 `res.data.rows`（资源数组）和 `res.data.total`（总数），示例代码根据 `rows` 和 `total` 做判断/迭代。  
-
-- `getCollectionResourceList(params)`  
-  - 方法/URL: GET `/library/collection/resource/list`  
-  - 入参: 查询参数 `params`（通用）  
-  - 出参: 未在示例中具体解构，推测为资源列表响应（常见格式可能含 `rows`/`total`）。  
-
-- `deleteCollectionResource(params)`  
-  - 方法/URL: DELETE `/library/collection/resource/${params.resourceId}`  
-  - 入参: 路径参数 `resourceId`（函数签名接收 `params`，调用时可能同时传 `userId`，但 URL 只用 `resourceId`）  
-  - 出参: 操作成功响应（示例中基于成功刷新/修改 Vuex 状态）
-
-**提取结果 — resource.js**
-- `saveResource(data)`  
-  - 方法/URL: POST `library/resource`  
-  - 入参: 请求体 `data`（资源对象，字段未在示例中列出）  
-  - 出参: 创建结果响应（示例未直接使用返回体）  
-
-- `getResource(id)`  
-  - 方法/URL: GET `library/resource/detail/${id}`  
-  - 入参: 路径参数 `id`（资源 ID）  
-  - 出参: 资源详情响应（格式代码中未展开）  
-
-- `updateResource(data)`  
-  - 方法/URL: PUT `library/resource`  
-  - 入参: 请求体 `data`（包含要更新的资源字段）  
-  - 出参: 更新结果响应  
-
-- `getResourceList(params)`  
-  - 方法/URL: GET `/library/resource/search`  
-  - 入参: 查询参数 `params`（示例使用：分页对象 + `sort`，例如 `{ pageSize, pageNum, sort: 'popular'|'newest' }`）  
-  - 出参: 响应中使用 `res.data.rows`（资源数组）和 `res.data.total`（总数量）  
-
-- `getResourceListById(params)`  
-  - 方法/URL: GET `/library/resource/list`  
-  - 入参: 查询参数 `params`（按 id 列表或条件检索）  
-  - 出参: 未在示例中细化（一般为资源列表）  
-
-- `getMoreByThisCreator(params)`  
-  - 方法/URL: GET `/library/resource/list/creator`  
-  - 入参: 查询参数 `params`（作者相关过滤，如 `creatorId`）  
-  - 出参: 资源列表响应（未细化）  
-
-- `getSimilar(params)`  
-  - 方法/URL: GET `/library/resource/list/similar`  
-  - 入参: 查询参数 `params`（如 `resourceId` 等）  
-  - 出参: 相似资源列表（未细化）  
-
-- `getResourceTags(params)`  
-  - 方法/URL: GET `/library/tag/list`  
-  - 入参: 查询参数 `params`（筛选标签）  
-  - 出参: 标签列表（未细化）  
-
-- `getAuthorList(params)`  
-  - 方法/URL: GET `/library/author/search`  
-  - 入参: 查询参数 `params`（搜索作者）  
-  - 出参: 作者列表（未细化）  
-
-- `uploadFile(formData)`  
-  - 方法/URL: POST `/library/resource/upload`（Content-Type: multipart/form-data）  
-  - 入参: `formData`（文件数据）  
-  - 出参: 上传结果（一般返回文件 URL / id）  
-
-- `getResouceUploadS3Url(data)`  
-  - 方法/URL: POST `/library/resource/uploadS3`  
-  - 入参: 请求体 `data`（用于获取 S3 上传地址，字段取决后端）  
-  - 出参: S3 上传地址 / 凭证响应  
-
-- `getFollowResourceList(params)`  
-  - 方法/URL: GET `/library/resource/follow/list`  
-  - 入参: 查询参数 `params`（示例使用分页 `{ pageSize, pageNum }`）  
-  - 出参: 响应中使用 `res.data.rows`（资源数组）和 `res.data.total`（总数）
-
-如需我把每个接口的入参/出参格式用 JSON Schema 或表格形式列出，或者基于后端文档补全字段说明（例如集合/资源对象的具体字段），我可以继续生成更详细的规范。要我现在生成 JSON Schema 或将结果导出为 CSV/Markdown 吗？
-
-**其余接口汇总**
-
-**Banner**
-- GET /library/banner
-  - 请求（query）: 可选 `params`（例如分页或位置）
-  - 示例请求:
-    GET /library/banner
-  - 响应示例: res.data.data => Array<{ title, image, url }>
-
-**Comment（通用评论）**
-- POST /library/comment
-  - 请求（body）: {
-      resourceId: number,
-      content: string,
-      userId?: number
+  },
+  {
+    "name": "getCollectionList",
+    "method": "GET",
+    "url": "/library/collection/list",
+    "request": { "params": { "userId": "number" } },
+    "response": { "data": [{ "id": 1, "name": "MyFolder", "userId": 123 }] },
+    "example": {
+      "request": "GET /library/collection/list?userId=123",
+      "response": { "code": 0, "data": [{ "id": 1, "name": "MyFolder", "userId": 123 }] }
     }
-  - 示例请求头: `Content-Type: application/json`
-  - 响应示例: { success: true, data: { id: number, content, resourceId, createdAt } }
+  },
+  {
+    "name": "addCollection",
+    "method": "POST",
+    "url": "/library/collection",
+    "request": { "json": { "name": "string", "userId": "number" } },
+    "response": { "data": { "id": 2, "name": "New Folder", "userId": 123 } },
+    "example": {
+      "request": { "method": "POST", "path": "/library/collection", "body": { "name": "New Folder", "userId": 123 } },
+      "response": { "code": 0, "data": { "id": 2, "name": "New Folder", "userId": 123 } }
+    }
+  },
+  {
+    "name": "addResourceToCollection",
+    "method": "POST",
+    "url": "/library/collection/{collectionId}/resource/{resourceId}",
+    "request": { "path": { "collectionId": "number", "resourceId": "number" }, "json": {} },
+    "response": { "message": "string" },
+    "example": {
+      "request": "POST /library/collection/1/resource/100",
+      "response": { "code": 0, "message": "added" }
+    }
+  },
+  {
+    "name": "deleteResourceInCollection",
+    "method": "DELETE",
+    "url": "/library/collection/{collectionId}/resource/{resourceId}",
+    "request": { "path": { "collectionId": "number", "resourceId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "DELETE /library/collection/1/resource/100", "response": { "code": 0, "message": "deleted" } }
+  },
+  {
+    "name": "getResourceInCollection",
+    "method": "GET",
+    "url": "/library/collection/{collectionId}/resource/list",
+    "request": { "path": { "collectionId": "number" }, "params": { "userId": "number", "pageNum": "number", "pageSize": "number" } },
+    "response": { "data": { "rows": [ { "id": 100, "title": "string" } ], "total": 1 } },
+    "example": { "request": "GET /library/collection/1/resource/list?userId=123&pageNum=1&pageSize=12", "response": { "code": 0, "data": { "rows": [{ "id": 100, "title": "MyRes" }], "total": 1 } } }
+  },
+  {
+    "name": "getCollectionResourceList",
+    "method": "GET",
+    "url": "/library/collection/resource/list",
+    "request": { "params": { "collectionId": "number", "pageNum": "number", "pageSize": "number" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /library/collection/resource/list?collectionId=1&pageNum=1&pageSize=12", "response": { "code": 0, "data": { "rows": [], "total": 0 } } }
+  },
+  {
+    "name": "deleteCollectionResource",
+    "method": "DELETE",
+    "url": "/library/collection/resource/{resourceId}",
+    "request": { "path": { "resourceId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "DELETE /library/collection/resource/100", "response": { "code": 0, "message": "deleted" } }
+  },
+  {
+    "name": "postComment",
+    "method": "POST",
+    "url": "/library/comment",
+    "request": { "json": { "resourceId": "number", "content": "string", "userId": "number?" } },
+    "response": { "data": { "id": 501, "content": "string", "resourceId": 100 } },
+    "example": { "request": { "method": "POST", "path": "/library/comment", "body": { "resourceId": 100, "content": "Nice!" } }, "response": { "code": 0, "data": { "id": 501 } } }
+  },
+  {
+    "name": "addCommunity",
+    "method": "POST",
+    "url": "/library/community",
+    "request": { "json": { "title": "string", "content": "string", "userId": "number" } },
+    "response": { "data": { "id": 10 } },
+    "example": { "request": "POST /library/community", "response": { "code": 0, "data": { "id": 10 } } }
+  },
+  {
+    "name": "getCommunityList",
+    "method": "GET",
+    "url": "/library/community/list",
+    "request": { "params": { "pageNum": "number", "pageSize": "number" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /library/community/list?pageNum=1&pageSize=10", "response": { "code":0, "data": { "rows": [], "total": 0 } } }
+  },
+  {
+    "name": "getCommunityDetail",
+    "method": "GET",
+    "url": "/library/community/detail/{id}",
+    "request": { "path": { "id": "number" } },
+    "response": { "data": { "id": 10, "title": "string", "content": "string" } },
+    "example": { "request": "GET /library/community/detail/10", "response": { "code":0, "data": { "id":10 } } }
+  },
+  {
+    "name": "getCommunityComment",
+    "method": "GET",
+    "url": "/library/community/comment/list",
+    "request": { "params": { "communityId": "number", "pageNum": "number", "pageSize": "number" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /library/community/comment/list?communityId=10&pageNum=1", "response": { "code":0, "data": { "rows": [], "total":0 } } }
+  },
+  {
+    "name": "likeCommunity",
+    "method": "POST",
+    "url": "/library/community/like/{id}",
+    "request": { "path": { "id": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /library/community/like/10", "response": { "code":0, "message":"liked" } }
+  },
+  {
+    "name": "unlikeCommunity",
+    "method": "DELETE",
+    "url": "/library/community/like/{id}",
+    "request": { "path": { "id": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "DELETE /library/community/like/10", "response": { "code":0, "message":"unliked" } }
+  },
+  {
+    "name": "getLikeList",
+    "method": "GET",
+    "url": "/library/community/like/list",
+    "request": { "params": { "userId": "number", "pageNum": "number", "pageSize": "number" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /library/community/like/list?userId=123", "response": { "code":0, "data": { "rows": [], "total":0 } } }
+  },
+  {
+    "name": "postCommunityComment",
+    "method": "POST",
+    "url": "/library/community/comment",
+    "request": { "json": { "communityId": "number", "content": "string", "userId": "number" } },
+    "response": { "data": { "id": 200 } },
+    "example": { "request": "POST /library/community/comment", "response": { "code":0, "data": { "id":200 } } }
+  },
+  {
+    "name": "deleteCommunityComment",
+    "method": "DELETE",
+    "url": "/library/community/comment/{id}",
+    "request": { "path": { "id": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "DELETE /library/community/comment/200", "response": { "code":0, "message":"deleted" } }
+  },
+  {
+    "name": "getActivityList",
+    "method": "GET",
+    "url": "/dashboard/getActivityList",
+    "request": { "params": { "pageNum": "number", "pageSize": "number" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /dashboard/getActivityList?pageNum=1", "response": { "code":0, "data": { "rows": [], "total":0 } } }
+  },
+  {
+    "name": "getWatchList",
+    "method": "GET",
+    "url": "/dashboard/getWatchList",
+    "request": { "params": {} },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /dashboard/getWatchList", "response": { "code":0, "data": { "rows": [] } } }
+  },
+  {
+    "name": "getDesignerList_dashboard",
+    "method": "GET",
+    "url": "/dashboard/getDesignerList",
+    "request": { "params": {} },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /dashboard/getDesignerList", "response": { "code":0, "data": { "rows": [] } } }
+  },
+  {
+    "name": "follow",
+    "method": "POST",
+    "url": "/library/follower",
+    "request": { "params": { "userId": "number", "targetId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /library/follower?userId=123&targetId=456", "response": { "code":0, "message":"followed" } }
+  },
+  {
+    "name": "unFollow",
+    "method": "DELETE",
+    "url": "/library/follower",
+    "request": { "params": { "userId": "number", "targetId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "DELETE /library/follower?userId=123&targetId=456", "response": { "code":0, "message":"unfollowed" } }
+  },
+  {
+    "name": "renameCollection",
+    "method": "PUT",
+    "url": "/library/collection",
+    "request": { "json": { "id": "number", "name": "string" } },
+    "response": { "message": "string" },
+    "example": { "request": "PUT /library/collection", "response": { "code":0, "message":"renamed" } }
+  },
+  {
+    "name": "addCollection_design",
+    "method": "POST",
+    "url": "/library/collection",
+    "request": { "json": { "name": "string", "userId": "number" } },
+    "response": { "data": { "id": 3 } },
+    "example": { "request": "POST /library/collection", "response": { "code":0, "data": { "id":3 } } }
+  },
+  {
+    "name": "deleteResource",
+    "method": "DELETE",
+    "url": "/library/resource/{resId}",
+    "request": { "path": { "resId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "DELETE /library/resource/100", "response": { "code":0, "message":"deleted" } }
+  },
+  {
+    "name": "deleteMake",
+    "method": "DELETE",
+    "url": "/library/comment/{resId}",
+    "request": { "path": { "resId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "DELETE /library/comment/501", "response": { "code":0, "message":"deleted" } }
+  },
+  {
+    "name": "moveResourceToCollection",
+    "method": "PUT",
+    "url": "/library/collection/{collectionId}/resource/{resourceId}",
+    "request": { "path": { "collectionId": "number", "resourceId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "PUT /library/collection/1/resource/100", "response": { "code":0, "message":"moved" } }
+  },
+  {
+    "name": "addResourceToCollection_design",
+    "method": "POST",
+    "url": "/library/collection/{collectionId}/resource/{resourceId}",
+    "request": { "path": { "collectionId": "number", "resourceId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /library/collection/1/resource/101", "response": { "code":0, "message":"added" } }
+  },
+  {
+    "name": "deleteCollection",
+    "method": "DELETE",
+    "url": "/library/collection/{collectionId}",
+    "request": { "path": { "collectionId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "DELETE /library/collection/2", "response": { "code":0, "message":"deleted" } }
+  },
+  {
+    "name": "getCollectList",
+    "method": "GET",
+    "url": "/library/collection/list",
+    "request": { "params": { "userId": "number" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /library/collection/list?userId=123", "response": { "code":0, "data": { "rows": [], "total":0 } } }
+  },
+  {
+    "name": "getHistoriesList",
+    "method": "GET",
+    "url": "/library/history/list",
+    "request": { "params": { "userId": "number", "pageNum": "number" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /library/history/list?userId=123", "response": { "code":0, "data": { "rows": [], "total":0 } } }
+  },
+  {
+    "name": "delHistories",
+    "method": "DELETE",
+    "url": "/library/history/{id}",
+    "request": { "path": { "id": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "DELETE /library/history/5", "response": { "code":0, "message":"deleted" } }
+  },
+  {
+    "name": "delsHistories",
+    "method": "DELETE",
+    "url": "/library/history",
+    "request": { "params": { "ids": "array" } },
+    "response": { "message": "string" },
+    "example": { "request": "DELETE /library/history?ids=1,2,3", "response": { "code":0, "message":"deleted" } }
+  },
+  {
+    "name": "getCollectResourceList",
+    "method": "GET",
+    "url": "/library/collection/{collectionId}/resource/list",
+    "request": { "path": { "collectionId": "number" }, "params": { "pageNum": "number" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /library/collection/1/resource/list", "response": { "code":0, "data": { "rows": [], "total":0 } } }
+  },
+  {
+    "name": "cancelCollectResource",
+    "method": "DELETE",
+    "url": "/library/collection/{collectionId}/resource/{resId}",
+    "request": { "path": { "collectionId": "number", "resId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "DELETE /library/collection/1/resource/100", "response": { "code":0, "message":"removed" } }
+  },
+  {
+    "name": "getResourceList_design",
+    "method": "GET",
+    "url": "/library/resource/list",
+    "request": { "params": { "pageNum": "number", "pageSize": "number" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /library/resource/list?pageNum=1", "response": { "code":0, "data": { "rows": [], "total":0 } } }
+  },
+  {
+    "name": "getLikesList",
+    "method": "GET",
+    "url": "/library/like/list",
+    "request": { "params": { "userId": "number" } },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /library/like/list?userId=123", "response": { "code":0, "data": { "rows": [] } } }
+  },
+  {
+    "name": "getFollowingList",
+    "method": "GET",
+    "url": "/library/follower/followings",
+    "request": { "params": { "userId": "number" } },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /library/follower/followings?userId=123", "response": { "code":0, "data": { "rows": [] } } }
+  },
+  {
+    "name": "getFollowerList",
+    "method": "GET",
+    "url": "/library/follower/followers",
+    "request": { "params": { "userId": "number" } },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /library/follower/followers?userId=123", "response": { "code":0, "data": { "rows": [] } } }
+  },
+  {
+    "name": "updateDiy",
+    "method": "PUT",
+    "url": "/library/author/profile",
+    "request": { "json": { "id": "number", "description": "string", "facebook": "string", "twitter": "string" } },
+    "response": { "message": "string" },
+    "example": { "request": "PUT /library/author/profile", "response": { "code":0, "message":"updated" } }
+  },
+  {
+    "name": "getProfile",
+    "method": "GET",
+    "url": "/library/author/profile/{id}",
+    "request": { "path": { "id": "number" } },
+    "response": { "data": { "id": 1, "name": "Author" } },
+    "example": { "request": "GET /library/author/profile/1", "response": { "code":0, "data": { "id":1 } } }
+  },
+  {
+    "name": "SortCollection",
+    "method": "PUT",
+    "url": "/library/collection/sort",
+    "request": { "json": { "order": "array" } },
+    "response": { "message": "string" },
+    "example": { "request": "PUT /library/collection/sort", "response": { "code":0, "message":"sorted" } }
+  },
+  {
+    "name": "getDesignerList",
+    "method": "GET",
+    "url": "/designer/list",
+    "request": { "params": { "pageNum": "number", "pageSize": "number" } },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /designer/list?pageNum=1", "response": { "code":0, "data": { "rows": [] } } }
+  },
+  {
+    "name": "unfollowDesigner",
+    "method": "GET",
+    "url": "/designer/unfollowDesigner",
+    "request": { "params": { "designerId": "number", "userId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "GET /designer/unfollowDesigner?designerId=5", "response": { "code":0, "message":"unfollowed" } }
+  },
+  {
+    "name": "followDesigner",
+    "method": "GET",
+    "url": "/designer/followDesigner",
+    "request": { "params": { "designerId": "number", "userId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "GET /designer/followDesigner?designerId=5", "response": { "code":0, "message":"followed" } }
+  },
+  {
+    "name": "getAllList_filter",
+    "method": "GET",
+    "url": "/select/type",
+    "request": { "params": {} },
+    "response": { "data": [] },
+    "example": { "request": "GET /select/type", "response": { "code":0, "data": [] } }
+  },
+  {
+    "name": "getGroupsList",
+    "method": "GET",
+    "url": "/groups/list",
+    "request": { "params": { "pageNum": "number" } },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /groups/list", "response": { "code":0, "data": { "rows": [] } } }
+  },
+  {
+    "name": "getGroupsMembers",
+    "method": "GET",
+    "url": "/groups/members",
+    "request": { "params": { "groupId": "number" } },
+    "response": { "data": { "members": [] } },
+    "example": { "request": "GET /groups/members?groupId=1", "response": { "code":0, "data": { "members": [] } } }
+  },
+  {
+    "name": "getGroupsInfo",
+    "method": "GET",
+    "url": "/groups/info",
+    "request": { "params": { "groupId": "number" } },
+    "response": { "data": { "id": 1, "name": "Group" } },
+    "example": { "request": "GET /groups/info?groupId=1", "response": { "code":0, "data": { "id":1 } } }
+  },
+  {
+    "name": "getGroupThings",
+    "method": "GET",
+    "url": "/groups/thingsInfo",
+    "request": { "params": { "groupId": "number" } },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /groups/thingsInfo?groupId=1", "response": { "code":0, "data": { "rows": [] } } }
+  },
+  {
+    "name": "getGroupAboutInfo",
+    "method": "GET",
+    "url": "/groups/groupAboutInfo",
+    "request": { "params": { "groupId": "number" } },
+    "response": { "data": { "about": "string" } },
+    "example": { "request": "GET /groups/groupAboutInfo?groupId=1", "response": { "code":0, "data": { "about": "..." } } }
+  },
+  {
+    "name": "changeUserGroupStatus",
+    "method": "POST",
+    "url": "/groups/changeUserGroup",
+    "request": { "params": { "groupId": "number", "userId": "number", "status": "string" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /groups/changeUserGroup?groupId=1&userId=123&status=join", "response": { "code":0 } }
+  },
+  {
+    "name": "createGroup",
+    "method": "POST",
+    "url": "/groups/createGroup",
+    "request": { "params": { "name": "string", "ownerId": "number" } },
+    "response": { "data": { "id": 2 } },
+    "example": { "request": "POST /groups/createGroup?name=NewGroup&ownerId=123", "response": { "code":0, "data": { "id":2 } } }
+  },
+  {
+    "name": "addLike",
+    "method": "POST",
+    "url": "/library/like/{resId}",
+    "request": { "path": { "resId": "number" }, "params": { "userId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /library/like/100?userId=123", "response": { "code":0, "message":"liked" } }
+  },
+  {
+    "name": "deleteLike",
+    "method": "DELETE",
+    "url": "/library/like/{resId}",
+    "request": { "path": { "resId": "number" }, "params": { "userId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "DELETE /library/like/100?userId=123", "response": { "code":0, "message":"unliked" } }
+  },
+  {
+    "name": "getLikelist",
+    "method": "GET",
+    "url": "/library/like/list",
+    "request": { "params": { "userId": "number", "pageNum": "number" } },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /library/like/list?userId=123", "response": { "code":0, "data": { "rows": [] } } }
+  },
+  {
+    "name": "getAllList_notice",
+    "method": "GET",
+    "url": "/select/type",
+    "request": { "params": {} },
+    "response": { "data": [] },
+    "example": { "request": "GET /select/type", "response": { "code":0, "data": [] } }
+  },
+  {
+    "name": "getNoticeMessageList",
+    "method": "GET",
+    "url": "/library/notice/message/list",
+    "request": { "params": { "pageNum": "number", "pageSize": "number" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /library/notice/message/list?pageNum=1", "response": { "code":0, "data": { "rows": [], "total":0 } } }
+  },
+  {
+    "name": "getNoticeMessageDetail",
+    "method": "GET",
+    "url": "/library/notice/message/detail",
+    "request": { "params": { "messageId": "number" } },
+    "response": { "data": { "id": 1, "content": "string" } },
+    "example": { "request": "GET /library/notice/message/detail?messageId=1", "response": { "code":0, "data": { "id":1 } } }
+  },
+  {
+    "name": "deleteContact",
+    "method": "DELETE",
+    "url": "/library/notice/message/delete/{talkerId}",
+    "request": { "path": { "talkerId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "DELETE /library/notice/message/delete/456", "response": { "code":0, "message":"deleted" } }
+  },
+  {
+    "name": "sendMessage",
+    "method": "POST",
+    "url": "/library/notice/message/send",
+    "request": { "json": { "toUserId": "number", "content": "string" } },
+    "response": { "data": { "id": 1001 } },
+    "example": { "request": "POST /library/notice/message/send", "response": { "code":0, "data": { "id":1001 } } }
+  },
+  {
+    "name": "readMessage",
+    "method": "PUT",
+    "url": "/library/notice/message/read",
+    "request": { "json": { "messageIds": "array" } },
+    "response": { "message": "string" },
+    "example": { "request": "PUT /library/notice/message/read", "response": { "code":0, "message":"read" } }
+  },
+  {
+    "name": "saveResource",
+    "method": "POST",
+    "url": "/library/resource",
+    "request": { "json": { "title": "string", "description": "string", "tags": "array", "authorId": "number" } },
+    "response": { "data": { "id": 100 } },
+    "example": { "request": "POST /library/resource", "response": { "code":0, "data": { "id":100 } } }
+  },
+  {
+    "name": "getResource",
+    "method": "GET",
+    "url": "/library/resource/detail/{id}",
+    "request": { "path": { "id": "number" } },
+    "response": { "data": { "id": 100, "title": "string" } },
+    "example": { "request": "GET /library/resource/detail/100", "response": { "code":0, "data": { "id":100 } } }
+  },
+  {
+    "name": "updateResource",
+    "method": "PUT",
+    "url": "/library/resource",
+    "request": { "json": { "id": "number", "title": "string" } },
+    "response": { "message": "string" },
+    "example": { "request": "PUT /library/resource", "response": { "code":0, "message":"updated" } }
+  },
+  {
+    "name": "getResourceList",
+    "method": "GET",
+    "url": "/library/resource/search",
+    "request": { "params": { "pageNum": "number", "pageSize": "number", "sort": "string" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /library/resource/search?pageNum=1&sort=popular", "response": { "code":0, "data": { "rows": [], "total":0 } } }
+  },
+  {
+    "name": "getResourceListById",
+    "method": "GET",
+    "url": "/library/resource/list",
+    "request": { "params": { } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /library/resource/list?creatorId=5", "response": { "code":0, "data": { "rows": [], "total":0 } } }
+  },
+  {
+    "name": "getMoreByThisCreator",
+    "method": "GET",
+    "url": "/library/resource/list/creator",
+    "request": { "params": { "creatorId": "number" } },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /library/resource/list/creator?creatorId=5", "response": { "code":0, "data": { "rows": [] } } }
+  },
+  {
+    "name": "getSimilar",
+    "method": "GET",
+    "url": "/library/resource/list/similar",
+    "request": { "params": { "resourceId": "number" } },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /library/resource/list/similar?resourceId=100", "response": { "code":0, "data": { "rows": [] } } }
+  },
+  {
+    "name": "getResourceTags",
+    "method": "GET",
+    "url": "/library/tag/list",
+    "request": { "params": {} },
+    "response": { "data": [ { "id":1, "name":"tag" } ] },
+    "example": { "request": "GET /library/tag/list", "response": { "code":0, "data": [ { "id":1, "name":"tag" } ] } }
+  },
+  {
+    "name": "getAuthorList",
+    "method": "GET",
+    "url": "/library/author/search",
+    "request": { "params": { "q": "string" } },
+    "response": { "data": [ { "id":1, "name":"Author" } ] },
+    "example": { "request": "GET /library/author/search?q=smith", "response": { "code":0, "data": [ { "id":1, "name":"Author" } ] } }
+  },
+  {
+    "name": "uploadFile",
+    "method": "POST",
+    "url": "/library/resource/upload",
+    "request": { "formData": { "file": "File" } },
+    "response": { "data": { "url": "string", "id": "number" } },
+    "example": { "request": "POST /library/resource/upload (multipart/form-data)", "response": { "code":0, "data": { "url":"https://.../f.png" } } }
+  },
+  {
+    "name": "getResouceUploadS3Url",
+    "method": "POST",
+    "url": "/library/resource/uploadS3",
+    "request": { "json": { "filename": "string", "contentType": "string" } },
+    "response": { "data": { "uploadUrl": "string", "fields": {} } },
+    "example": { "request": "POST /library/resource/uploadS3", "response": { "code":0, "data": { "uploadUrl":"https://s3..." } } }
+  },
+  {
+    "name": "getFollowResourceList",
+    "method": "GET",
+    "url": "/library/resource/follow/list",
+    "request": { "params": { "pageNum": "number", "pageSize": "number" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /library/resource/follow/list?pageNum=1", "response": { "code":0, "data": { "rows": [], "total":0 } } }
+  },
+  {
+    "name": "getAllList_setting",
+    "method": "GET",
+    "url": "/select/type",
+    "request": { "params": {} },
+    "response": { "data": [] },
+    "example": { "request": "GET /select/type", "response": { "code":0, "data": [] } }
+  },
+  {
+    "name": "changeName",
+    "method": "POST",
+    "url": "/system/user/changeUserInfo",
+    "request": { "json": { "name": "string" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /system/user/changeUserInfo", "response": { "code":0, "message":"ok" } }
+  },
+  {
+    "name": "changePassword",
+    "method": "POST",
+    "url": "/system/user/changePassword",
+    "request": { "json": { "oldPassword":"string", "newPassword":"string" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /system/user/changePassword", "response": { "code":0 } }
+  },
+  {
+    "name": "changeEmail",
+    "method": "POST",
+    "url": "/system/user/changeEmail",
+    "request": { "json": { "email": "string" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /system/user/changeEmail", "response": { "code":0 } }
+  },
+  {
+    "name": "getProfileList",
+    "method": "GET",
+    "url": "/library/author/profile/{id}",
+    "request": { "path": { "id": "number" } },
+    "response": { "data": { "id":1, "description":"string" } },
+    "example": { "request": "GET /library/author/profile/1", "response": { "code":0, "data": { "id":1 } } }
+  },
+  {
+    "name": "updateProfileList",
+    "method": "PUT",
+    "url": "/library/author/profile",
+    "request": { "json": { "id": "number", "description": "string" } },
+    "response": { "message": "string" },
+    "example": { "request": "PUT /library/author/profile", "response": { "code":0 } }
+  },
+  {
+    "name": "getThingDetails",
+    "method": "GET",
+    "url": "/thing/detail",
+    "request": { "params": { "id": "number" } },
+    "response": { "data": { "id": 1, "title": "string" } },
+    "example": { "request": "GET /thing/detail?id=1", "response": { "code":0, "data": { "id":1 } } }
+  },
+  {
+    "name": "getThingDownloadInfo",
+    "method": "GET",
+    "url": "/thing/downloadInfo",
+    "request": { "params": { "id": "number" } },
+    "response": { "data": { "downloadUrl": "string" } },
+    "example": { "request": "GET /thing/downloadInfo?id=1", "response": { "code":0, "data": { "downloadUrl":"https://..." } } }
+  },
+  {
+    "name": "getUserInfoByThingId",
+    "method": "GET",
+    "url": "/thing/getUserInfo",
+    "request": { "params": { "thingId": "number" } },
+    "response": { "data": { "user": {} } },
+    "example": { "request": "GET /thing/getUserInfo?thingId=1", "response": { "code":0, "data": { "user": {} } } }
+  },
+  {
+    "name": "getUserMakesByThingId",
+    "method": "GET",
+    "url": "/thing/getUserMakes",
+    "request": { "params": { "thingId": "number" } },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /thing/getUserMakes?thingId=1", "response": { "code":0, "data": { "rows": [] } } }
+  },
+  {
+    "name": "getUserCommentsByThingId",
+    "method": "GET",
+    "url": "/thing/getUserComments",
+    "request": { "params": { "thingId": "number" } },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /thing/getUserComments?thingId=1", "response": { "code":0, "data": { "rows": [] } } }
+  },
+  {
+    "name": "addUserComments",
+    "method": "POST",
+    "url": "/thing/addUserComments",
+    "request": { "params": { "thingId": "number", "content": "string" } },
+    "response": { "data": { "id": 1 } },
+    "example": { "request": "POST /thing/addUserComments?thingId=1&content=Nice", "response": { "code":0, "data": { "id":1 } } }
+  },
+  {
+    "name": "getThingList",
+    "method": "GET",
+    "url": "/thing/getThingList",
+    "request": { "params": { "pageNum": "number" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /thing/getThingList?pageNum=1", "response": { "code":0, "data": { "rows": [], "total":0 } } }
+  },
+  {
+    "name": "changeCollect",
+    "method": "POST",
+    "url": "/thing/changeCollect",
+    "request": { "params": { "thingId": "number", "userId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /thing/changeCollect?thingId=1&userId=123", "response": { "code":0 } }
+  },
+  {
+    "name": "changeLike",
+    "method": "POST",
+    "url": "/thing/changeLike",
+    "request": { "params": { "thingId": "number", "userId": "number" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /thing/changeLike?thingId=1&userId=123", "response": { "code":0 } }
+  },
+  {
+    "name": "getUserList",
+    "method": "GET",
+    "url": "/user/list",
+    "request": { "params": { "pageNum": "number" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /user/list?pageNum=1", "response": { "code":0, "data": { "rows": [], "total":0 } } }
+  },
+  {
+    "name": "Login",
+    "method": "POST",
+    "url": "/auth/user/login",
+    "request": { "json": { "username": "string", "password": "string" } },
+    "response": { "data": { "token": "string", "user": { "id": 123 } } },
+    "example": { "request": "POST /auth/user/login", "response": { "code":0, "data": { "token":"abc", "user": { "id":123 } } } }
+  },
+  {
+    "name": "Logout",
+    "method": "DELETE",
+    "url": "/auth/user/logout",
+    "request": { "json": { } },
+    "response": { "message": "string" },
+    "example": { "request": "DELETE /auth/user/logout", "response": { "code":0 } }
+  },
+  {
+    "name": "getUserInfo",
+    "method": "GET",
+    "url": "/system/user/getUserInfo",
+    "request": {},
+    "response": { "data": { "id": 123, "username": "user" } },
+    "example": { "request": "GET /system/user/getUserInfo", "response": { "code":0, "data": { "id":123 } } }
+  },
+  {
+    "name": "refresh",
+    "method": "POST",
+    "url": "/user/refresh",
+    "request": {},
+    "response": { "data": { "token": "string" } },
+    "example": { "request": "POST /user/refresh", "response": { "code":0, "data": { "token":"abc" } } }
+  },
+  {
+    "name": "getUserInfoByUserId",
+    "method": "GET",
+    "url": "/user/getUserInfoByUserId",
+    "request": { "params": { "userId": "number" } },
+    "response": { "data": { "id": 123, "username": "user" } },
+    "example": { "request": "GET /user/getUserInfoByUserId?userId=123", "response": { "code":0, "data": { "id":123 } } }
+  },
+  {
+    "name": "updateUserProfile",
+    "method": "POST",
+    "url": "/user/updateProfile",
+    "request": { "params": { "displayName": "string" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /user/updateProfile?displayName=Bob", "response": { "code":0 } }
+  },
+  {
+    "name": "postUserMessage",
+    "method": "POST",
+    "url": "/user/postUserMessage",
+    "request": { "params": { "toUserId": "number", "content": "string" } },
+    "response": { "data": { "id": 1 } },
+    "example": { "request": "POST /user/postUserMessage?toUserId=123&content=Hi", "response": { "code":0, "data": { "id":1 } } }
+  },
+  {
+    "name": "findFollowsByUserId",
+    "method": "GET",
+    "url": "/user/getFollowsByUserId",
+    "request": { "params": { "userId": "number" } },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /user/getFollowsByUserId?userId=123", "response": { "code":0 } }
+  },
+  {
+    "name": "getFollowingList_user",
+    "method": "GET",
+    "url": "/library/follower/followings",
+    "request": { "params": { "userId": "number" } },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /library/follower/followings?userId=123", "response": { "code":0 } }
+  },
+  {
+    "name": "register",
+    "method": "POST",
+    "url": "/auth/user/register",
+    "request": { "json": { "username": "string", "password": "string", "email": "string" } },
+    "response": { "data": { "id": 123 } },
+    "example": { "request": "POST /auth/user/register", "response": { "code":0, "data": { "id":123 } } }
+  },
+  {
+    "name": "getCommentList",
+    "method": "GET",
+    "url": "/library/comment/list",
+    "request": { "params": { "resourceId": "number", "pageNum": "number" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /library/comment/list?resourceId=100", "response": { "code":0, "data": { "rows": [], "total":0 } } }
+  },
+  {
+    "name": "getCommentListFromId",
+    "method": "GET",
+    "url": "/library/comment/detail/{commentId}",
+    "request": { "path": { "commentId": "number" } },
+    "response": { "data": { "id": 501, "content": "string" } },
+    "example": { "request": "GET /library/comment/detail/501", "response": { "code":0, "data": { "id":501 } } }
+  },
+  {
+    "name": "postComment_user",
+    "method": "POST",
+    "url": "/library/comment",
+    "request": { "json": { "resourceId": "number", "content": "string" } },
+    "response": { "data": { "id": 502 } },
+    "example": { "request": "POST /library/comment", "response": { "code":0, "data": { "id":502 } } }
+  },
+  {
+    "name": "getMakeList",
+    "method": "GET",
+    "url": "/library/comment/make/list",
+    "request": { "params": { "userId": "number" } },
+    "response": { "data": { "rows": [] } },
+    "example": { "request": "GET /library/comment/make/list?userId=123", "response": { "code":0 } }
+  },
+  {
+    "name": "getMakeDetail",
+    "method": "GET",
+    "url": "/library/comment/detail/{commentId}",
+    "request": { "path": { "commentId": "number" } },
+    "response": { "data": { "id": 501 } },
+    "example": { "request": "GET /library/comment/detail/501", "response": { "code":0 } }
+  },
+  {
+    "name": "getCommentUploadS3Url",
+    "method": "POST",
+    "url": "/library/comment/uploadS3",
+    "request": { "json": { "filename": "string" } },
+    "response": { "data": { "uploadUrl": "string" } },
+    "example": { "request": "POST /library/comment/uploadS3", "response": { "code":0, "data": { "uploadUrl":"..." } } }
+  },
+  {
+    "name": "openLogin",
+    "method": "POST",
+    "url": "/auth/user/openLogin",
+    "request": { "json": { } },
+    "response": { "data": {} },
+    "example": { "request": "POST /auth/user/openLogin", "response": { "code":0 } }
+  },
+  {
+    "name": "bindThird",
+    "method": "POST",
+    "url": "/system/user/bindThird",
+    "request": { "json": { "provider": "string", "token": "string" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /system/user/bindThird", "response": { "code":0 } }
+  },
+  {
+    "name": "unbindThird",
+    "method": "POST",
+    "url": "/system/user/unbindThird",
+    "request": { "json": { "provider": "string" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /system/user/unbindThird", "response": { "code":0 } }
+  },
+  {
+    "name": "activeUserSendEmail",
+    "method": "POST",
+    "url": "/auth/user/active",
+    "request": { "json": { "email": "string" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /auth/user/active", "response": { "code":0 } }
+  },
+  {
+    "name": "resetPasswordSendEmail",
+    "method": "POST",
+    "url": "/auth/user/reset",
+    "request": { "json": { "email": "string" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /auth/user/reset", "response": { "code":0 } }
+  },
+  {
+    "name": "openRegister",
+    "method": "POST",
+    "url": "/auth/user/openRegister",
+    "request": { "json": { "username": "string", "password": "string" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /auth/user/openRegister", "response": { "code":0 } }
+  },
+  {
+    "name": "getNoticeCount",
+    "method": "GET",
+    "url": "/library/notice/count",
+    "request": { "params": {} },
+    "response": { "data": { "count": 0 } },
+    "example": { "request": "GET /library/notice/count", "response": { "code":0, "data": { "count":0 } } }
+  },
+  {
+    "name": "getNoticeList",
+    "method": "GET",
+    "url": "/library/notice/list",
+    "request": { "params": { "pageNum": "number" } },
+    "response": { "data": { "rows": [], "total": 0 } },
+    "example": { "request": "GET /library/notice/list?pageNum=1", "response": { "code":0 } }
+  },
+  {
+    "name": "putNoticeRead",
+    "method": "PUT",
+    "url": "/library/notice/read",
+    "request": { "json": { "ids": "array" } },
+    "response": { "message": "string" },
+    "example": { "request": "PUT /library/notice/read", "response": { "code":0 } }
+  },
+  {
+    "name": "postNoticeCommentReply",
+    "method": "POST",
+    "url": "/library/notice/comment/reply",
+    "request": { "json": { "commentId": "number", "content": "string" } },
+    "response": { "data": {} },
+    "example": { "request": "POST /library/notice/comment/reply", "response": { "code":0 } }
+  },
+  {
+    "name": "postNoticeMessageSend",
+    "method": "POST",
+    "url": "/library/notice/message/send",
+    "request": { "json": { "toUserId": "number", "content": "string" } },
+    "response": { "data": {} },
+    "example": { "request": "POST /library/notice/message/send", "response": { "code":0 } }
+  },
+  {
+    "name": "sendCode",
+    "method": "GET",
+    "url": "/auth/user/getCode",
+    "request": { "params": { "email": "string" } },
+    "response": { "data": { "code": "string" } },
+    "example": { "request": "GET /auth/user/getCode?email=a@b.com", "response": { "code":0, "data": { "code":"1234" } } }
+  },
+  {
+    "name": "resetPassword",
+    "method": "POST",
+    "url": "/auth/user/resetPassword",
+    "request": { "json": { "token": "string", "newPassword": "string" } },
+    "response": { "message": "string" },
+    "example": { "request": "POST /auth/user/resetPassword", "response": { "code":0 } }
+  }
+]
 
-**Community（社区）**
-- POST /library/community
-  - 请求(body): { title, content, userId, ... }
-  - 响应: 创建结果
-- GET /library/community/list
-  - 查询: params { pageNum, pageSize, ... }
+说明：
+- `params` 表示通过 query string 或 axios 的 `params` 传入。
+- `json` 表示请求体 JSON（通过 axios 的 `data` 传入），示例响应均为常见后端返回结构，真实字段以后端为准。
+
   - 响应: { rows: Array<Community>, total: number }
 - GET /library/community/detail/{id}
   - 路径参数: id
