@@ -51,9 +51,9 @@
         </span>
         <span class="login-text">
           No account?
-          <a class="route-to" @click="$emit('switchForm', 'register')"
-            >Create one</a
-          >
+          <a class="route-to" @click="$emit('switchForm', 'register')">
+            Create one
+          </a>
         </span>
       </div>
     </el-form-item>
@@ -61,7 +61,6 @@
 </template>
 <script>
 import { sendCode, resetPassword } from "@/api/user.js";
-/* eslint-disable */
 export default {
   name: "ResetForm",
   data() {
@@ -71,8 +70,8 @@ export default {
       if (!pattern.test(this.resetForm.password)) {
         callback(
           new Error(
-            "The length of the password is 8-16 characters, must contain two kinds of numbers, letters and characters."
-          )
+            "The length of the password is 8-16 characters, must contain two kinds of numbers, letters and characters.",
+          ),
         );
       }
       callback();
@@ -241,6 +240,6 @@ export default {
 .reset-button {
   height: 64px;
   font-size: 20px;
-  width:100%;
+  width: 100%;
 }
 </style>

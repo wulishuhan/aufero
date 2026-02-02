@@ -13,12 +13,13 @@ module.exports = {
   },
   rules: {
     // 全部关闭所有校验
-    'prettier/prettier': 'off',
-    'vue/multi-word-component-names': 'off',
-    'vue/no-unused-components': 'off',
-    'no-unused-vars': 'off',
-    'no-console': 'off',
-    'no-debugger': 'off',
+    "prettier/prettier": "off",
+    "vue/multi-word-component-names": "off",
+    "vue/no-unused-components": "off",
+    "no-unused-vars": "off",
+    "no-console": "off",
+    "no-debugger": "off",
+    "no-useless-escape": "off",
   },
   overrides: [
     {
