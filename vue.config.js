@@ -53,7 +53,7 @@ module.exports = defineConfig({
     // },
     proxy: {
       [process.env.VUE_APP_BASE_API]: {
-        target: "https://api.leadiffer.cn",
+        target: "http://172.16.116.234:8080",
         changeOrigin: true,
         pathRewrite: {
           ["^" + process.env.VUE_APP_BASE_API]: "",

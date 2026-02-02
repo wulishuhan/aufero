@@ -52,7 +52,7 @@
             <div class="app-header__logo">
               <router-link to="/main">
                 <!-- <svg-icon icon-class="logo" class-name="logo"></svg-icon> -->
-                <img src="@/assets/logo-800x250-light.png" class="logo" />
+                <!-- <img src="@/assets/logo-800x250-light.png" class="logo" /> -->
               </router-link>
             </div>
 

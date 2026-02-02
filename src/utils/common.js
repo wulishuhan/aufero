@@ -45,7 +45,7 @@ export function createCanvas(
   borderColor,
   color,
   textColor,
-  fontText
+  fontText,
 ) {
   var canvas = document.createElement("canvas");
   canvas.width = W;
@@ -117,7 +117,7 @@ export function formateDatetime(timestamp) {
 
 export function isMobile() {
   var flag = navigator.userAgent.match(
-    /(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone|Intel Mac OS X 10_15_6)/i
+    /(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone|Intel Mac OS X 10_15_6)/i,
   );
   //window.orientation属性用于获取屏幕的当前方向，只有移动设备才有这个属性，桌面设备会返回undefined。
   return flag || typeof window.orientation !== "undefined";

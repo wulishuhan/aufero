@@ -16,13 +16,11 @@
 </template>
 <script>
 var oMeta = document.createElement("meta");
-import NavBar from "@/components/NavBar";
 import AppHeader from "@/components/AppHeader";
 import OrturFooter from "@/components/OrturFooter";
 export default {
-  /* eslint-disable */
   name: "Layout",
-  components: { NavBar, OrturFooter, AppHeader },
+  components: {  OrturFooter, AppHeader },
   data() {
     return {
       showIeTip: false,
